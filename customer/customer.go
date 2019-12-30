@@ -10,10 +10,10 @@ var db *sqlx.DB
 
 type Customer struct {
   
-  CustID  int    `db:"CustID"`
-  Name    string `db:"Name"`
-  Address string `db:"Address"`
-  Email   string `db:"Email"`
+  CustID  int    //`db:"CustID"`
+  Name    string //`db:"Name"`
+  Address string //`db:"Address"`
+  Email   string //`db:"Email"`
 
 }
 
@@ -40,7 +40,6 @@ func GetCustomer(id int) (*Customer, error) {
   c := &Customer{}
   rows.Next()
   if err := rows.StructScan(c); err != nil {  
-    fmt.Printf("%#v\n", *c)
     return nil, err
   } 
   rows.Close()
@@ -48,40 +47,59 @@ func GetCustomer(id int) (*Customer, error) {
 }
 
 func CreateCustomer(c *Customer) error {
-  txn, err := db.Begin()
+  txn, err := db.Beginx()
   if err != nil {
     return err
   }
   defer txn.Rollback()
-  query := "INSERT INTO customer(CustID,Name,Address,Email) VALUES(?, ?, ?, ?)"
+  query := "INSERT INTO customer(custid,name,address,email) VALUES(:custid, :name, :address, :email)"
+  /*
   stmt, err := txn.Prepare(query)
   if err != nil {
     return err
   }
 
-  _, err = stmt.Exec(c.CustID, c.Name, c.Address, c.Email)
+  _, err = stmt.Exec(&c)
   if err != nil  {
     return err
   }
+  */
+
+  txn.NamedExec(query, &c)
   txn.Commit()
   return nil
 }
 
+func UpdateCustomer(c *Customer) error {
+  upd := "UPDATE customer SET Name=:name, Address=:address, Email=:email WHERE CustID = :custid"
+  txn, err := db.Beginx()
+  if err != nil {
+    return err
+  }
+  defer txn.Rollback()
+  _, err = txn.NamedExec(upd, &c)
+  if err != nil {
+    return err
+  }
+  txn.Commit()
+  return nil
 
-func (c *Customer) GetID() int {
-  return c.CustID
 }
 
-func (c *Customer) GetName() string {
-  return c.Name
-}
-
-func (c *Customer) GetAddress() string {
-  return c.Address
-}
-
-func (c *Customer) GetEmail() string {
-  return c.Email
+func DeleteCustomer(c *Customer) error {
+  del := "DELETE FROM customer WHERE CustID=:custid"
+  txn, err := db.Beginx()
+  if err != nil {
+    return err
+  }
+  defer txn.Rollback()
+  _, err = txn.NamedExec(del, &c)
+  if err != nil {
+    return err
+  }
+  txn.Commit()
+  c = &Customer{}
+  return nil
 }
 
 func DBClose() {
