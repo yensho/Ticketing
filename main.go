@@ -6,6 +6,8 @@ import (
 	c "main/customer"
 	"os"
 
+  //"net/http"
+
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -22,19 +24,11 @@ func init() {
 	c.SetDB(db)
 
 	sqlStmt := `
-  create table customer (CustID integer not null primary key, Name text, Address text, Email text);
+  create table customer (custid integer not null primary key, name text, address text, email text);
   delete from customer;
   `
 
 	db.MustExec(sqlStmt)
-	/*
-	  tx := db.MustBegin()
-	  stmt, err := tx.Preparex("insert into customer(id, name, address) values (?, ?, ?)")
-	  if err != nil {
-	    log.Fatal(err)
-	  }
-	  defer stmt.Close()
-	*/
 	for i := 1; i < 10; i++ {
 		cust := c.Customer{i, fmt.Sprint("Tester Name", i), "123 Test Rd", fmt.Sprint("Test", i, "@email.com")}
 		err = c.CreateCustomer(&cust)
@@ -42,12 +36,15 @@ func init() {
 			log.Fatal(err)
 		}
 	}
-	//tx.Commit()
+
 
 }
 
 func main() {
 
+  mycust := &c.Customer{CustID: 5, Name: "Bob Test", Address: "54321 Test Dr", Email: "Bob@Test.com"}
+  c.UpdateCustomer(mycust)
+  
 	for i := 1; i < 10; i++ {
     cust, err := c.GetCustomer(i)
     if err != nil {
@@ -55,6 +52,11 @@ func main() {
     }
 		fmt.Printf("%#v\n", cust)
 	}
-
+  cust, _ := c.GetCustomer(4)
+  c.DeleteCustomer(cust)
+  cust, err := c.GetCustomer(4)
+  if err != nil {
+    fmt.Println(err)
+  }
   c.DBClose()
 }
