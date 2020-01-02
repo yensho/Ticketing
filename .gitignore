@@ -13,3 +13,9 @@
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
+
+# Sqlite3 test database
+*.db
+
+# in folder binary
+src

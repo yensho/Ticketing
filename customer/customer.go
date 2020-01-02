@@ -9,12 +9,20 @@ import (
 var db *sqlx.DB
 
 type Customer struct {
-  
+
   CustID  int    //`db:"CustID"`
   Name    string //`db:"Name"`
   Address string //`db:"Address"`
   Email   string //`db:"Email"`
 
+}
+
+type CustomerNotFound struct {
+  custID int
+}
+
+func (e *CustomerNotFound) Error() string {
+  return fmt.Sprintf("Could not find customer with CustID=%d.", e.custID)
 }
 
 func Connect(path string) {
@@ -31,7 +39,7 @@ func SetDB(newdb *sqlx.DB) {
 }
 
 func GetCustomer(id int) (*Customer, error) {
-  
+
   rows, err := db.Queryx("SELECT CustID, Name, Address, Email FROM customer WHERE CustID = ?", id)
   if err != nil {
     return nil, err
@@ -39,9 +47,13 @@ func GetCustomer(id int) (*Customer, error) {
 
   c := &Customer{}
   rows.Next()
-  if err := rows.StructScan(c); err != nil {  
-    return nil, err
-  } 
+  if err := rows.StructScan(c); err != nil {
+    if c.CustID == 0 {
+      return nil, &CustomerNotFound{id}
+    } else {
+      return nil, err
+    }
+  }
   rows.Close()
   return c, nil
 }
@@ -53,17 +65,6 @@ func CreateCustomer(c *Customer) error {
   }
   defer txn.Rollback()
   query := "INSERT INTO customer(custid,name,address,email) VALUES(:custid, :name, :address, :email)"
-  /*
-  stmt, err := txn.Prepare(query)
-  if err != nil {
-    return err
-  }
-
-  _, err = stmt.Exec(&c)
-  if err != nil  {
-    return err
-  }
-  */
 
   txn.NamedExec(query, &c)
   txn.Commit()
@@ -86,7 +87,8 @@ func UpdateCustomer(c *Customer) error {
 
 }
 
-func DeleteCustomer(c *Customer) error {
+func DeleteCustomer(custID int) error {
+  c := Customer{CustID: custID}
   del := "DELETE FROM customer WHERE CustID=:custid"
   txn, err := db.Beginx()
   if err != nil {
@@ -98,7 +100,7 @@ func DeleteCustomer(c *Customer) error {
     return err
   }
   txn.Commit()
-  c = &Customer{}
+  //c = &Customer{}
   return nil
 }
 
